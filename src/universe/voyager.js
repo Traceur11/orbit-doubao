@@ -191,14 +191,14 @@ export function createVoyager(scene) {
   let disposed = false;
   // Fixed attitude is deliberate: Voyager is three-axis stabilized, not a spinning planet.
   function update(_dt, _settings = {}) { if (!disposed) group.updateMatrixWorld(true); }
-  function updateVisibility(camera, { focusBody = null, activeGalaxyId = null, stage = null, orbitsVisible = true } = {}) {
+  function updateVisibility(camera, { focusBody = null, activeGalaxyId = null, stage = null, orbitsVisible = true, techEra = true } = {}) {
     if (disposed) return;
     const focusId = typeof focusBody === 'string' ? focusBody : focusBody?.id;
     const focused = focusId === body.id;
     const inGalaxy = !activeGalaxyId || activeGalaxyId === 'galaxy';
     const localStage = !['trajectory', 'universe', 'local-group'].includes(stage);
     const distance = camera.position.distanceTo(body.position);
-    group.visible = inGalaxy && localStage && (focused || distance < 2200);
+    group.visible = techEra && inGalaxy && localStage && (focused || distance < 2200);
     const detailed = distance <= 110;
     assembly.visible = dish.visible = key.visible = fill.visible = group.visible && detailed;
     marker.visible = group.visible && !detailed;

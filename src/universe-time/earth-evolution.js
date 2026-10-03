@@ -20,6 +20,14 @@ export function ageMaFromYear(year, nowYear = NOW_YEAR) {
   return Math.max(0, -year / 1_000_000);
 }
 
+/** Human space-technology era: artificial satellites, the station, JWST and
+ * Voyager only exist between 1957 (Sputnik) and the present — a Jurassic or
+ * Hadean Earth must not be surrounded by modern spacecraft, and a far-future
+ * Earth (red-giant stage) no longer hosts human technology. */
+export function getTechEra(year, nowYear = NOW_YEAR) {
+  return Number.isFinite(year) && year >= 1957 && year <= nowYear;
+}
+
 function fmt(n, minDecimals = 0, maxDecimals = 2) {
   if (Number.isInteger(n) && minDecimals > 0) return n.toFixed(minDecimals);
   return parseFloat(n.toFixed(maxDecimals)).toString();
@@ -36,12 +44,11 @@ export function formatEarthAge(years) {
   return `${fmt(years / 1000)} ka`;
 }
 
-/** Night lights factor — modern 1, fading fast before 100 ka, 0 beyond 0.1 Ma. */
+/** Night lights factor — city lights are a modern phenomenon (~1957+):
+ * any era before the present has no artificial city lights. */
 function nightFactorAt(ageMa) {
   if (ageMa <= 0) return 1;
-  if (ageMa <= 0.01) return lerp(1, 0.65, ageMa / 0.01);
-  if (ageMa <= 0.05) return lerp(0.65, 0.05, (ageMa - 0.01) / 0.04);
-  if (ageMa <= 0.1) return lerp(0.05, 0, (ageMa - 0.05) / 0.05);
+  if (ageMa <= 0.000001) return lerp(1, 0, ageMa / 0.000001); // last year only
   return 0;
 }
 
@@ -119,6 +126,23 @@ function surfaceLabel(mode, ageMa, periodId) {
  */
 export function getEarthEvolution(year, nowYear = NOW_YEAR) {
   if (!Number.isFinite(year)) throw new TypeError('getEarthEvolution: year must be finite.');
+  if (year > nowYear) {
+    /* Far future (e.g. +5 Ga): schematic red-giant stage. No geological chart
+     * covers the future; continents are kept modern and the atmosphere turns
+     * red-orange. FUTURE VISUALIZATION — not a scientific prediction. */
+    return {
+      ageMa: 0, periodId: '', surfaceMode: 'modern',
+      mapA: 'paleo-540', mapB: 'paleo-540', mapBlend: 0,
+      historyStrength: 0,
+      landTint: 0xffd8c0, oceanTint: 0xffc8a0,
+      cloudOpacity: 0.2, nightFactor: 0, iceFactor: 0, lavaFactor: 0,
+      atmosphereColor: 0xff8a4a, atmosphereStrength: 1.3, surfaceBrightness: 0.95,
+      description: `示意 · ${formatEarthAge(Math.abs(year - nowYear))}：太阳进入红巨星阶段，地球表面极端高温，不适宜生命。FUTURE VISUALIZATION。`,
+      label: 'FUTURE EARTH', contextLabel: 'FUTURE EARTH',
+      surfaceState: 'FUTURE EARTH', approximation: true,
+      periodName: '', eraName: '', eonName: '',
+    };
+  }
   const ageMa = ageMaFromYear(year, nowYear);
   const ctx = getGeologicalContext(year);
   const period = ctx?.period || null;

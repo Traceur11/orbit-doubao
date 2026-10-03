@@ -74,13 +74,16 @@ export function createWorld(scene, textures, pixels) {
   return world;
 }
 
-export function updateWorldVisibility(world, camera, controls, orbitsVisible, navigationState = {}) {
+export function updateWorldVisibility(world, camera, controls, orbitsVisible, navigationState = {}, techEra = true) {
   const { galaxy, solarMarker, earth, earthSatellites, station, earthOrbitGroup, orbitGroup } = world;
   const dist = camera.position.distanceTo(controls.target);
   const trajectory = navigationState.stage === 'trajectory';
   const showSolar = !trajectory || navigationState.flight;
-  world.jwst.body.group.visible = showSolar;
-  world.voyager.updateVisibility(camera, { ...navigationState, orbitsVisible });
+  // Modern human spacecraft only exist from 1957 (Sputnik) to the present:
+  // a Jurassic or Hadean Earth must not show satellites, the station, JWST
+  // or Voyager around it.
+  world.jwst.body.group.visible = showSolar && techEra;
+  world.voyager.updateVisibility(camera, { ...navigationState, orbitsVisible, techEra });
   for (const body of world.solarBodies.values()) body.group.visible = showSolar;
   const galFade = smooth(1400, 18000, dist);
   galaxy.material.uniforms.uOpacity.value = galFade * .85 * (1 - smooth(120000, 600000, dist) * .55);
@@ -91,8 +94,8 @@ export function updateWorldVisibility(world, camera, controls, orbitsVisible, na
   world.galacticMotion.group.visible = showSolar && dist > 4000;
   world.galacticMotion.setMarkerScale(dist);
   const earthDistance = camera.position.distanceTo(earth.position);
-  earthSatellites.visible = showSolar && earthDistance < 70;
-  station.visible = showSolar && earthDistance < 150;
+  earthSatellites.visible = showSolar && techEra && earthDistance < 70;
+  station.visible = showSolar && techEra && earthDistance < 150;
   earthOrbitGroup.visible = showSolar && orbitsVisible && earthDistance < 60;
   orbitGroup.visible = !trajectory && orbitsVisible && dist > 8 && dist < 11000;
   const orbitFade = smooth(8, 35, dist) * (1 - smooth(1200, 11000, dist));

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
-  getEarthEvolution, ageMaFromYear, formatEarthAge, getEvolutionLabel,
+  getEarthEvolution, ageMaFromYear, formatEarthAge, getEvolutionLabel, getTechEra,
 } from '../src/universe-time/earth-evolution.js';
 import {
   PALEO_KEYS, PALEO_LAYOUTS, drawPaleoLayer, createPaleogeographyTextures,
@@ -51,19 +51,19 @@ test('NOW is a modern Earth with full night lights and no history strength', () 
   assert.equal(state.ageMa, 0);
 });
 
-test('12 ka is an ice-age Earth: modern continents, stronger ice, fading lights', () => {
+test('12 ka is an ice-age Earth: modern continents, stronger ice, no city lights', () => {
   const state = getEarthEvolution(-12000, NOW);
   assert.equal(state.surfaceMode, 'modern');
   assert.equal(state.ageMa, 0.012);
   assert.ok(state.iceFactor > 0.6, `iceFactor ${state.iceFactor} should peak near 12 ka`);
-  assert.ok(state.nightFactor < 0.65 && state.nightFactor > 0.5, `nightFactor ${state.nightFactor} partially faded`);
+  assert.equal(state.nightFactor, 0, 'city lights did not exist 12,000 years ago');
   assert.equal(state.surfaceState, 'ICE AGE EARTH');
 });
 
-test('300 ka is still modern continents with reduced night lights', () => {
+test('300 ka is still modern continents with no night lights', () => {
   const state = getEarthEvolution(-300000, NOW);
   assert.equal(state.surfaceMode, 'modern');
-  assert.ok(state.nightFactor < 0.1, `nightFactor ${state.nightFactor} should be nearly 0 at 300 ka`);
+  assert.equal(state.nightFactor, 0);
   assert.ok(state.iceFactor > 0.2);
 });
 
@@ -160,13 +160,13 @@ test('4.54 Ga is early Hadean, fully lava', () => {
 /* ------------------------------------------------------------------ */
 /* cross-era invariants                                                */
 /* ------------------------------------------------------------------ */
-test('night lights are strictly modern-first and zero in the deep past', () => {
+test('night lights exist only in the present; every past era has none', () => {
   const modern = getEarthEvolution(NOW, NOW).nightFactor;
   const ice = getEarthEvolution(-12000, NOW).nightFactor;
   const paleo = getEarthEvolution(-66000000, NOW).nightFactor;
   const ancient = getEarthEvolution(-2000000000, NOW).nightFactor;
-  assert.ok(modern > ice, 'modern > ice age');
-  assert.ok(ice > paleo, 'ice age > 66 Ma');
+  assert.equal(modern, 1);
+  assert.equal(ice, 0);
   assert.equal(paleo, 0);
   assert.equal(ancient, 0);
 });
@@ -201,6 +201,26 @@ test('visual state evolves continuously across the Cenozoic→Cretaceous seam', 
 /* ------------------------------------------------------------------ */
 /* paleogeography module                                               */
 /* ------------------------------------------------------------------ */
+test('human space technology (satellites, ISS, JWST, Voyager) only exists from 1957', () => {
+  assert.equal(getTechEra(2026), true);          // present
+  assert.equal(getTechEra(1957), true);          // Sputnik 1
+  assert.equal(getTechEra(1956), false);
+  assert.equal(getTechEra(-12000), false);       // ice age — no satellites
+  assert.equal(getTechEra(-180000000), false);   // Jurassic — no satellites
+  assert.equal(getTechEra(-4300000000), false);  // Hadean
+  assert.equal(getTechEra(5000000000), false);    // far future — red giant, no tech
+  assert.equal(getTechEra(Number.NaN), false);
+});
+
+test('far future year returns a FUTURE EARTH state without lights or spacecraft-era hints', () => {
+  const future = getEarthEvolution(5000000000, NOW);
+  assert.equal(future.surfaceMode, 'modern');
+  assert.equal(future.surfaceState, 'FUTURE EARTH');
+  assert.equal(future.nightFactor, 0);
+  assert.equal(future.historyStrength, 0);
+  assert.equal(future.lavaFactor, 0);
+});
+
 test('paleogeography layouts cover all expected era keys', () => {
   assert.deepEqual(PALEO_KEYS,
     ['paleo-540', 'paleo-250', 'paleo-180', 'paleo-100', 'paleo-66', 'ancient-earth']);

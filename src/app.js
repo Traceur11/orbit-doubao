@@ -16,7 +16,7 @@ import { createEarthDetail } from './earth/detail.js';
 import { mobile } from './core/math.js';
 import { UniverseClock } from './universe-time/universe-clock.js';
 import { TimelineController } from './universe-time/timeline-controller.js';
-import { getEarthEvolution, formatEarthAge } from './universe-time/earth-evolution.js';
+import { getEarthEvolution, formatEarthAge, getTechEra } from './universe-time/earth-evolution.js';
 import { createPaleogeographyTextures } from './earth/paleogeography.js';
 import { createCosmicTimeUI, parseOrbitUrl } from './ui/cosmic-time.js';
 import { BRANDING } from './branding.js';
@@ -112,12 +112,37 @@ export async function startOrbit() {
     const baseAtmosphereColor = baseAtmosphere?.uColor?.value?.getHex?.() ?? 0x4a7bd8;
     const baseAtmosphereStrength = baseAtmosphere?.uStrength?.value ?? 1.1;
     const baseCloudOpacity = world.clouds?.material?.opacity ?? 0.64;
+    // Human space-technology era (satellites / ISS / JWST / Voyager): visible
+    // only from 1957 onward in simulation years — a Jurassic Earth must not
+    // be surrounded by modern spacecraft.
+    let techEra = true;
     function applyEarthVisual(year) {
       // EarthSense shows the live modern surface; on exit the animate loop
       // re-applies the visual for the current simulation year.
       const visual = earthsense?.active
         ? getEarthEvolution(nowYear, nowYear)
         : getEarthEvolution(year, nowYear);
+      techEra = getTechEra(year, nowYear);
+      if (world.earthSatellites) world.earthSatellites.visible = techEra && !earthsense?.active;
+      if (world.station) world.station.visible = techEra;
+      if (world.jwst?.body?.group) world.jwst.body.group.visible = techEra;
+      if (world.voyager?.body?.group) world.voyager.body.group.visible = techEra;
+      const nightBtn = document.getElementById('night-view');
+      if (nightBtn) {
+        const noLights = visual.nightFactor <= 0.05;
+        nightBtn.disabled = !techEra || noLights;
+        nightBtn.title = (!techEra || noLights) ? '该时期没有城市灯光' : '看万家灯火';
+      }
+      const stationBtn = document.getElementById('station-view');
+      if (stationBtn) {
+        stationBtn.disabled = !techEra;
+        stationBtn.title = techEra ? '探访空间站' : '该时期还没有空间站';
+      }
+      const jwstBtn = document.getElementById('jwst-visit');
+      if (jwstBtn) {
+        jwstBtn.disabled = !techEra;
+        jwstBtn.title = techEra ? '探访詹姆斯·韦布太空望远镜' : '该时期还没有韦布望远镜';
+      }
       const u = world.earth?.mesh?.material?.uniforms;
       if (u && visual.mapA && historicalTextures[visual.mapA]) u.uHistoryMapA.value = historicalTextures[visual.mapA];
       if (u && visual.mapB && historicalTextures[visual.mapB]) u.uHistoryMapB.value = historicalTextures[visual.mapB];
@@ -144,7 +169,8 @@ export async function startOrbit() {
       const surfaceEl = document.getElementById('history-surface-state');
       if (surfaceEl) surfaceEl.textContent = visual.surfaceState;
       const ageValue = document.getElementById('earth-age-value');
-      if (ageValue) ageValue.textContent = formatEarthAge(visual.ageMa * 1_000_000);
+      if (ageValue) ageValue.textContent = visual.surfaceState === 'FUTURE EARTH'
+        ? formatEarthAge(Math.abs(year - nowYear)) : formatEarthAge(visual.ageMa * 1_000_000);
       const stateEl = document.getElementById('earth-surface-state');
       if (stateEl) stateEl.textContent = visual.surfaceState;
       const hudEl = document.getElementById('earth-age-hud');
@@ -213,10 +239,12 @@ export async function startOrbit() {
       world.flybys.update(dt, camera, {
         paused: settings.paused, enabled: !earthsense.active && !trajectoriesVisible, navigating,
       });
-      updateWorldVisibility(world, camera, controls, settings.orbitsVisible, navigation.getState());
-      if (!ui.wallpaper.satellitesVisible) {
+      updateWorldVisibility(world, camera, controls, settings.orbitsVisible, navigation.getState(), techEra);
+      if (!ui.wallpaper.satellitesVisible || !techEra) {
         world.earthSatellites.visible = false;
         world.station.visible = false;
+      }
+      if (!ui.wallpaper.satellitesVisible) {
         world.earthOrbitGroup.visible = false;
       }
       world.motionTrajectories.group.traverse(object => {
@@ -244,7 +272,7 @@ export async function startOrbit() {
         world.orbitGroup.visible = false;
       }
       if (++uiTick % 2 === 0) labels.update({ ...settings, ...navigation.getState(),
-        satellitesVisible: ui.wallpaper.satellitesVisible,
+        satellitesVisible: ui.wallpaper.satellitesVisible && techEra,
         labelsVisible: settings.labelsVisible && !earthsense.visible && !trajectoriesVisible,
       });
       if (uiTick % 10 === 0) {
