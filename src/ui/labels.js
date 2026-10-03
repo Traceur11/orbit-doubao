@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { clamp, mobile } from '../core/math.js';
 
 /** DOM labels projected from the existing scene, including body occlusion. */
-export function createLabels({ camera, controls, world, onSelect, onInfo }) {
+export function createLabels({ camera, controls, world, onSelect, onInfo, epochNodes = [], onEpoch }) {
   const { bodies, earth, station, getData, getPosition } = world;
   const labels = [], occupied = [];
   const projected = new THREE.Vector3(), occlusionRay = new THREE.Vector3(), toPosition = new THREE.Vector3();
@@ -20,6 +20,27 @@ export function createLabels({ camera, controls, world, onSelect, onInfo }) {
     document.getElementById('labels').appendChild(element);
     labels.push({ id, name, type, element });
   }
+
+  // ORBIT 2.0: epoch nodes painted on the Galactic orbit — clicking one jumps
+  // the COSMIC TIME clock to that year (kind 3 = fine event points stay
+  // unlabeled to avoid clutter; they remain clickable in the 3D view).
+  function addEpoch(node) {
+    if (!node || node.kind === 3) return;
+    const element = document.createElement('button');
+    element.className = 'celestial-label epoch';
+    element.dataset.bodyId = 'epoch-' + node.id;
+    const dot = document.createElement('i');
+    dot.style.background = node.color || 'currentColor';
+    const span = document.createElement('span');
+    span.textContent = node.name;
+    element.title = (node.cn || node.name) + ' · 点击回到该时期';
+    element.tabIndex = -1;
+    element.onclick = () => onEpoch?.(node);
+    element.append(dot, span);
+    document.getElementById('labels').appendChild(element);
+    labels.push({ id: 'epoch-' + node.id, name: node.name, type: 'epoch', element, node });
+  }
+  for (const node of epochNodes) addEpoch(node);
 
   for (const body of bodies.values()) if (!body.parentGalaxy) add(body.id, body.cn);
   add('iss', 'ISS · 国际空间站', 'station');
@@ -54,7 +75,7 @@ export function createLabels({ camera, controls, world, onSelect, onInfo }) {
     for (const item of labels) {
       const body = getData(item.id);
       let show = labelsVisible;
-      const deepLabel = item.type === 'galaxy' || Boolean(body?.parentGalaxy);
+      const deepLabel = item.type === 'galaxy' || item.type === 'epoch' || Boolean(body?.parentGalaxy);
       if (item.type === 'galaxy') {
         show = show && (mode === 'local-group' || (mode === 'galaxy' && distance > 90000 && item.id !== galaxyId));
       } else if (body?.parentGalaxy && (body.kind === 'star' || body.kind === 'black-hole')) {
@@ -72,6 +93,8 @@ export function createLabels({ camera, controls, world, onSelect, onInfo }) {
           && camera.position.distanceTo(body.position) < 1600;
       } else if (item.id === 'solar') show = show && galaxyId === 'galaxy' && mode === 'galaxy' && distance > 2800;
       else if (item.id === 'galactic-solar') show = show && galaxyId === 'galaxy' && mode === 'galaxy' && distance > 8000;
+      else if (item.type === 'epoch') show = show && galaxyId === 'galaxy' && mode === 'galaxy' && distance > 8000
+        && (item.node.kind === 1 || (item.node.kind === 2 && distance < 45000));
       else if (item.id === 'iss') show = show && satellitesVisible && isVisible(station) && solarSystem && camera.position.distanceTo(station.position) < 11;
       else if (item.id === 'moon') show = show && solarSystem && camera.position.distanceTo(earth.position) < 55 && selected !== 'iss';
       else show = show && solarSystem && distance < 1400 && camera.position.distanceTo(body.position) < 1400 && item.id !== selected;
@@ -80,7 +103,7 @@ export function createLabels({ camera, controls, world, onSelect, onInfo }) {
         item.element.style.pointerEvents = 'none';
         continue;
       }
-      const position = getPosition(item.id);
+      const position = item.type === 'epoch' ? item.node.position : getPosition(item.id);
       projected.copy(position).project(camera);
       let px = (projected.x * .5 + .5) * viewW, py = (-projected.y * .5 + .5) * viewH;
       const rightMargin = item.type === 'galaxy' ? 18 : 65;

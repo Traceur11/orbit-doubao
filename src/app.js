@@ -60,7 +60,20 @@ export async function startOrbit() {
       camera, controls, world, onInfo: info.update, toast,
       onStage: mode => ui?.updateStage(mode),
     });
-    const labels = createLabels({ camera, controls, world, onSelect: navigation.flyTo, onInfo: () => info.update('solar') });
+    // ORBIT 2.0: epoch nodes painted on the Galactic orbit jump the COSMIC
+    // TIME clock to their year when clicked (labels and 3D picking both land
+    // here). `cosmic` is created later in the same scope — the closure reads
+    // it only after user interaction, when it is initialized.
+    const epochNodes = world.galacticMotion?.getEpochNodes?.() || [];
+    const labels = createLabels({
+      camera, controls, world, onSelect: navigation.flyTo, onInfo: () => info.update('solar'),
+      epochNodes,
+      onEpoch: node => {
+        cosmic.setYear(node.year);
+        cosmic.refresh();
+        toast(`${node.cn || node.name} · 时间回到 ${node.name}`);
+      },
+    });
     ui = bindNavigationUI({ renderer, camera, world, navigation, assets, toast, controls,
       wallpaperView: createWallpaperRenderer({ renderer, composer, scene, world, textures, mainCamera: camera, resizeMain: () => resize(world) }),
       setSpaceColor: color => {
@@ -68,7 +81,17 @@ export async function startOrbit() {
         renderer.setClearColor(color);
         document.documentElement.style.setProperty('--space-color', color);
       },
-      onPick: (raycaster, event) => earthsense?.pick(raycaster, event) || false,
+      onPick: (raycaster, event) => {
+        // Epoch nodes on the Galactic orbit: clicking jumps the clock.
+        const hit = world.galacticMotion?.pickEpoch?.(raycaster);
+        if (hit) {
+          cosmic.setYear(hit.year);
+          cosmic.refresh();
+          toast(`${hit.cn || hit.name} · 时间回到 ${hit.name}`);
+          return true;
+        }
+        return earthsense?.pick(raycaster, event) || false;
+      },
     });
     world.update(0, ui.getState());
     navigation.initialize();
@@ -210,6 +233,7 @@ export async function startOrbit() {
     window.ORBIT = {
       version: '2.0.0',
       wallpaper: ui.wallpaper,
+      world,
       getState: () => ({
         ...navigation.getState(), ...ui.getState(),
         planetCount: data.filter(d => d.orbit && d.id !== 'moon').length,
