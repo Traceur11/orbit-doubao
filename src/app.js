@@ -16,7 +16,8 @@ import { createEarthDetail } from './earth/detail.js';
 import { mobile } from './core/math.js';
 import { UniverseClock } from './universe-time/universe-clock.js';
 import { TimelineController } from './universe-time/timeline-controller.js';
-import { getEarthVisualForYear } from './universe-time/earth-history.js';
+import { getEarthEvolution, formatEarthAge } from './universe-time/earth-evolution.js';
+import { createPaleogeographyTextures } from './earth/paleogeography.js';
 import { createCosmicTimeUI, parseOrbitUrl } from './ui/cosmic-time.js';
 import { BRANDING } from './branding.js';
 
@@ -52,6 +53,11 @@ export async function startOrbit() {
     const textures = await loadTextures(assets, fraction => {
       document.getElementById('load-progress').style.width = `${fraction * 90}%`;
     });
+    // Earth Evolution: procedural paleogeography maps (generated once at
+    // startup, offline-safe, no external fetch). They feed the Earth shader's
+    // uHistoryMapA/B uniforms and must exist before createWorld builds the mesh.
+    const historicalTextures = createPaleogeographyTextures();
+    Object.assign(textures, historicalTextures);
     const world = createWorld(scene, textures, pixels);
     const earthDetail = createEarthDetail({ world, renderer, assets, compact: mobile() });
     const info = createInfoPanel({ getData: world.getData });
@@ -103,22 +109,46 @@ export async function startOrbit() {
     const clock = new UniverseClock({ nowYear });
     const timeline = new TimelineController({ nowYear });
     const baseAtmosphere = world.earth?.atmosphere?.material.uniforms;
+    const baseAtmosphereColor = baseAtmosphere?.uColor?.value?.getHex?.() ?? 0x4a7bd8;
+    const baseAtmosphereStrength = baseAtmosphere?.uStrength?.value ?? 1.1;
     const baseCloudOpacity = world.clouds?.material?.opacity ?? 0.64;
     function applyEarthVisual(year) {
-      if (earthsense?.active) return;
-      const visual = getEarthVisualForYear(year, nowYear);
-      if (visual.present) {
-        if (world.clouds?.material) world.clouds.material.opacity = baseCloudOpacity;
-        if (baseAtmosphere) {
-          baseAtmosphere.uStrength.value = 1.1;
-        }
-        return;
+      // EarthSense shows the live modern surface; on exit the animate loop
+      // re-applies the visual for the current simulation year.
+      const visual = earthsense?.active
+        ? getEarthEvolution(nowYear, nowYear)
+        : getEarthEvolution(year, nowYear);
+      const u = world.earth?.mesh?.material?.uniforms;
+      if (u && visual.mapA && historicalTextures[visual.mapA]) u.uHistoryMapA.value = historicalTextures[visual.mapA];
+      if (u && visual.mapB && historicalTextures[visual.mapB]) u.uHistoryMapB.value = historicalTextures[visual.mapB];
+      if (u) {
+        u.uHistoryBlend.value = visual.mapBlend;
+        u.uHistoryStrength.value = visual.historyStrength;
+        u.uLandTint.value.setHex(visual.landTint);
+        u.uOceanTint.value.setHex(visual.oceanTint);
+        u.uNightFactor.value = visual.nightFactor;
+        u.uIceFactor.value = visual.iceFactor;
+        u.uLavaFactor.value = visual.lavaFactor;
+        u.uSurfaceBrightness.value = visual.surfaceBrightness;
       }
       if (world.clouds?.material) world.clouds.material.opacity = visual.cloudOpacity;
       if (baseAtmosphere) {
-        baseAtmosphere.uColor.value.setHex(visual.atmosphereColor);
-        baseAtmosphere.uStrength.value = visual.atmosphereStrength;
+        if (visual.ageMa <= 0) {
+          baseAtmosphere.uColor.value.setHex(baseAtmosphereColor);
+          baseAtmosphere.uStrength.value = baseAtmosphereStrength;
+        } else {
+          baseAtmosphere.uColor.value.setHex(visual.atmosphereColor);
+          baseAtmosphere.uStrength.value = visual.atmosphereStrength;
+        }
       }
+      const surfaceEl = document.getElementById('history-surface-state');
+      if (surfaceEl) surfaceEl.textContent = visual.surfaceState;
+      const ageValue = document.getElementById('earth-age-value');
+      if (ageValue) ageValue.textContent = formatEarthAge(visual.ageMa * 1_000_000);
+      const stateEl = document.getElementById('earth-surface-state');
+      if (stateEl) stateEl.textContent = visual.surfaceState;
+      const hudEl = document.getElementById('earth-age-hud');
+      if (hudEl) hudEl.hidden = navigation.getState()?.focusBody !== 'earth';
     }
     const cosmic = createCosmicTimeUI({
       world, navigation, clock, timeline, toast,
@@ -152,6 +182,7 @@ export async function startOrbit() {
     setTimeout(() => document.getElementById('loading')?.remove(), 900);
 
     let hidden = false, lastFrameTime = performance.now(), uiTick = 0, observingEarth = false;
+    let earthsenseActive = false;
     let trajectoriesVisible = false;
     function animate(now) {
       requestAnimationFrame(animate);
@@ -198,6 +229,12 @@ export async function startOrbit() {
       if (observingEarth !== earthsense.visible) {
         observingEarth = earthsense.visible;
         earthDetail.setObservation(observingEarth);
+      }
+      // EarthSense borrows the modern surface; restore the current era's
+      // visual state as soon as the session ends.
+      if (earthsenseActive !== earthsense.active) {
+        earthsenseActive = earthsense.active;
+        if (!earthsenseActive) applyEarthVisual(cosmic.getYear());
       }
       updateFraming(observingEarth, dt);
       if (earthsense.visible) {
@@ -262,6 +299,14 @@ export async function startOrbit() {
         getState: () => cosmic.getState(),
         startJourney: () => cosmic.startJourney(),
         syncUrl: () => cosmic.syncUrl(),
+      },
+      earthEvolution: {
+        getState: () => getEarthEvolution(cosmic.getYear(), nowYear),
+        setYear: year => {
+          cosmic.setYear(year);
+          applyEarthVisual(cosmic.getYear());
+          cosmic.refresh();
+        },
       },
       destinations: () => [...world.galaxyDefinitions, ...world.deepSpace.bodies.values()].map(body => ({
         id: body.id, name: body.cn, kind: body.kind, parentGalaxy: body.parentGalaxy,

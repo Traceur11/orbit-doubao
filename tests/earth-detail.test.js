@@ -53,7 +53,15 @@ test('universe and observation share the same detailed mesh and unchanged day/ni
     assert.equal(material.uniforms.uDay.value, detail.day);
     assert.equal(world.earth.mesh.geometry, sharedGeometry);
     assert.equal(material.fragmentShader, originalShader);
-    assert.deepEqual(Object.keys(material.uniforms).sort(), ['uDay', 'uNight']);
+    const uniforms = Object.keys(material.uniforms);
+    assert.ok(uniforms.includes('uDay') && uniforms.includes('uNight'), 'day/night uniforms preserved');
+    // Earth Evolution adds historical-surface uniforms (map crossfade, tints,
+    // night factor, ice, lava, brightness) — they must not disturb the shared
+    // mesh or the detail texture swap.
+    for (const name of ['uHistoryMapA', 'uHistoryMapB', 'uHistoryBlend', 'uHistoryStrength',
+      'uLandTint', 'uOceanTint', 'uNightFactor', 'uIceFactor', 'uLavaFactor', 'uSurfaceBrightness']) {
+      assert.ok(uniforms.includes(name), `${name} uniform present`);
+    }
     assert.equal(world.earth.atmosphere.material.uniforms.uStrength.value, 1.1);
     assert.equal(world.clouds.material.opacity, .64);
     assert.equal(world.clouds.visible, !observation, 'decorative cloud map never contradicts sampled clear weather');
