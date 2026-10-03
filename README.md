@@ -6,7 +6,7 @@
 
 当前版本：**1.9.0**。查看[更新日志](CHANGELOG.md)。
 
-**线上体验：** [https://ryh842487118-bot.github.io/orbit/](https://ryh842487118-bot.github.io/orbit/)
+**线上体验：** https://traceur11.github.io/orbit-doubao/
 
 直接双击本目录的 **index.html** 即可使用。Three.js 和 15 张纹理（含地球 8K 日夜源图）已嵌入 HTML，宇宙漫游无需联网、安装依赖或启动服务器。EarthSense 通过公开接口按需联网。建议使用支持 WebGL 2、已开启硬件加速的新版 Chrome、Edge 或 Safari。
 
