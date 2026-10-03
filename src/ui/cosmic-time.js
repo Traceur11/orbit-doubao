@@ -165,8 +165,12 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
     $('history-eon').textContent = (context.eon?.englishName || 'PRE-GEOLOGICAL').toUpperCase();
     $('history-en').textContent = context.period?.englishName || context.era?.englishName || context.eon?.englishName || 'EARTH FORMATION';
     $('history-name').textContent = context.period?.name || context.era?.name || context.eon?.name || '地球形成之前';
-    const start = context.period ? Math.max(context.period.startYear, -4600000000) : -4600000000;
-    const end = context.period ? context.period.endYear : -4000000000;
+    const start = context.period ? context.period.startYear
+      : context.era ? context.era.startYear
+      : context.eon ? context.eon.startYear : -4600000000;
+    const end = context.period ? context.period.endYear
+      : context.era ? context.era.endYear
+      : context.eon ? context.eon.endYear : -4000000000;
     $('history-range').textContent = end === 0
       ? `${formatYearsAgoProse(clock.nowYear - start)} — present`
       : `${formatYearsAgoProse(clock.nowYear - start)} — ${formatYearsAgoProse(clock.nowYear - end)}`;

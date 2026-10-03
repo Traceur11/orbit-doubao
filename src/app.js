@@ -175,6 +175,29 @@ export async function startOrbit() {
       if (stateEl) stateEl.textContent = visual.surfaceState;
       const hudEl = document.getElementById('earth-age-hud');
       if (hudEl) hudEl.hidden = navigation.getState()?.focusBody !== 'earth';
+      // The left info-panel blurb must match the era: "万家灯火" makes no
+      // sense on a Precambrian or Hadean Earth.
+      if (navigation.getState()?.focusBody === 'earth') {
+        const infoDesc = document.getElementById('info-description');
+        if (infoDesc) {
+          infoDesc.textContent = visual.surfaceState === 'PRESENT EARTH'
+            ? '越过蔚蓝的大气层，看见云海之下的万家灯火。这里，是我们在宇宙中的家。'
+            : visual.description;
+        }
+      }
+      // The bottom dock offers JWST / Voyager destinations — impossible before
+      // the space age. Disable them in the deep past like the jwst-visit button.
+      if (techEra === false) {
+        for (const dockBtn of document.querySelectorAll('.planet-button[data-id="jwst"], .planet-button[data-id="voyager-1"], .planet-button[data-id="iss"]')) {
+          dockBtn.disabled = true;
+          dockBtn.title = '该时期还没有这个航天器';
+        }
+      } else {
+        for (const dockBtn of document.querySelectorAll('.planet-button[data-id="jwst"], .planet-button[data-id="voyager-1"], .planet-button[data-id="iss"]')) {
+          dockBtn.disabled = false;
+          dockBtn.title = '';
+        }
+      }
     }
     const cosmic = createCosmicTimeUI({
       world, navigation, clock, timeline, toast,
@@ -187,7 +210,6 @@ export async function startOrbit() {
     const urlState = parseOrbitUrl(location.search, nowYear);
     if (urlState.time !== null) {
       cosmic.setYear(urlState.time, { syncUrl: false });
-      applyEarthVisual(cosmic.getYear());
       cosmic.showPanel(true);
     }
     if (urlState.target) {
@@ -195,8 +217,14 @@ export async function startOrbit() {
       // Re-assert the deep-link target after init settles (resize, compile,
       // first rendered frame) so no init-time side effect can leave the
       // camera on the default Earth view. Immediate + same target = idempotent.
-      setTimeout(() => navigation.flyTo(urlState.target, { immediate: true }), 250);
+      setTimeout(() => {
+        navigation.flyTo(urlState.target, { immediate: true });
+        applyEarthVisual(cosmic.getYear());
+      }, 250);
     }
+    // Apply after the target is set so the era-aware info-panel blurb and
+    // Earth HUD render for the requested focus body.
+    applyEarthVisual(cosmic.getYear());
     cosmic.refresh();
     resize(world);
     document.getElementById('load-progress').style.width = '100%';
