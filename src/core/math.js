@@ -2,7 +2,7 @@ import * as THREE from "three";
 const TAU = Math.PI * 2;
 const clamp = THREE.MathUtils.clamp;
 const smooth = (a, b, x) => THREE.MathUtils.smoothstep(x, a, b);
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 const mobile = () => innerWidth <= 600;
 let randomSeed = 20260906;
 function random() {

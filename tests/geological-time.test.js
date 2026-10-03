@@ -19,17 +19,20 @@ test('66 million years ago is recognised as the Cretaceous / K-Pg boundary regio
   assert.ok(near.includes('dinosaur-extinction'));
 });
 
-test('252 million years ago is recognised as the Permian–Triassic transition', () => {
-  assert.equal(getPeriod(-252200001).id, 'permian');
-  assert.equal(getPeriod(-252200000).id, 'triassic');
-  const near = getEventsAround(-252200000, 60000000).map(event => event.id);
+test('252/251.902 million years ago is the Permian–Triassic transition', () => {
+  assert.equal(getPeriod(-251902001).id, 'permian');
+  assert.equal(getPeriod(-251902000).id, 'triassic');
+  const near = getEventsAround(-251902000, 60000000).map(event => event.id);
   assert.ok(near.includes('first-dinosaurs'));
 });
 
-test('541 million years ago is the base of the Cambrian / Phanerozoic', () => {
-  assert.equal(getPeriod(-541000000).id, 'cambrian');
-  assert.equal(getEra(-541000000).id, 'paleozoic');
-  assert.equal(getEon(-541000000).id, 'phanerozoic');
+test('541/538.8 million years ago is the base of the Cambrian / Phanerozoic', () => {
+  assert.equal(getPeriod(-538800000).id, 'cambrian');
+  assert.equal(getEra(-538800000).id, 'paleozoic');
+  assert.equal(getEon(-538800000).id, 'phanerozoic');
+  // One year earlier is still the Proterozoic (out of the Phanerozoic).
+  assert.equal(getPeriod(-538800001), null);
+  assert.equal(getEon(-538800001).id, 'proterozoic');
 });
 
 test('4.54 billion years ago is Earth formation (Hadean, pre-period)', () => {
@@ -74,7 +77,7 @@ test('all geological periods cover the Phanerozoic without gaps or overlaps', ()
   for (let i = 0; i < periods.length - 1; i++) {
     assert.equal(periods[i].endYear, periods[i + 1].startYear, `gap between ${periods[i].id} and ${periods[i + 1].id}`);
   }
-  assert.equal(periods[0].startYear, -541000000);
+  assert.equal(periods[0].startYear, -538800000);
   assert.equal(periods[periods.length - 1].endYear, 0);
 });
 

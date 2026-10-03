@@ -36,7 +36,7 @@ export function getEarthVisualForYear(year, nowYear = 2026) {
       label: 'Archean · 太古宙（近似）',
     };
   }
-  if (age >= 541000000) {
+  if (age >= 538800000) {
     // Proterozoic: snowball-Earth cold spells.
     return {
       cloudOpacity: 0.34,
@@ -46,7 +46,7 @@ export function getEarthVisualForYear(year, nowYear = 2026) {
       label: 'Proterozoic · 元古宙（近似）',
     };
   }
-  if (age >= 252200000) {
+  if (age >= 251902000) {
     // Paleozoic: moderate, lush early life.
     return {
       cloudOpacity: 0.5,

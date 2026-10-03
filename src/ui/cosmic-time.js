@@ -21,11 +21,12 @@ import { getEventsAround, findEvent } from '../universe-time/historical-events.j
 import { formatCompactYear, formatYear, formatYearsAgo, formatYearsAgoProse } from '../universe-time/cosmic-time.js';
 import { detectScale } from '../universe-time/time-scale.js';
 import { getGalacticYear } from '../universe-time/galactic-orbit.js';
+import { createGeologicalTimeline } from './geological-timeline.js';
 
-/** Journey stops from the spec: Earth formation → ... → present. */
+/** Journey stops from the spec: Earth formation → ... → present (ICS v2026/06). */
 export const JOURNEY_STOPS = Object.freeze([
-  -4_540_000_000, -2_500_000_000, -541_000_000, -252_000_000, -201_000_000,
-  -145_000_000, -66_000_000, -2_580_000, 2026,
+  -4_540_000_000, -2_500_000_000, -538_800_000, -251_902_000, -201_400_000,
+  -143_100_000, -66_000_000, -2_580_000, 2026,
 ]);
 const JOURNEY_HOLD_MS = 2600;
 
@@ -142,6 +143,7 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
     speedButton.title = yearsPerSecond >= 1e6
       ? `≈ ${formatYearsAgo(yearsPerSecond)}/秒` : `${formatYearsAgo(yearsPerSecond)}/秒`;
     updateHistoryPanel();
+    geologicalTimeline.refresh();
   }
 
   /* ---------- history panel ---------- */
@@ -308,6 +310,16 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
   $('history-explore').onclick = explorePeriod;
   journeyButton.onclick = () => journey ? cancelJourney() : startJourney();
 
+  /* ---------- EARTH GEOLOGICAL TIME (second bar, same clock) ---------- */
+  const geologicalTimeline = createGeologicalTimeline({
+    bar: $('cosmic-bar'),
+    clock,
+    timeline,
+    navigation,
+    setYear,
+    toast,
+  });
+
   /* ---------- Cosmic Journey ---------- */
   function startJourney() {
     if (journey) return;
@@ -438,5 +450,6 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
       position: timeline.yearToPosition(clock.getYear()),
       journey: !!journey,
     }),
+    geologicalTimeline,
   };
 }

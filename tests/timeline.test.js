@@ -106,11 +106,11 @@ test('timeline rejects invalid inputs', () => {
   assert.throws(() => new TimelineController({ keys: [{ p: 0, year: 1 }] }), RangeError);
 });
 
-test('ORBIT 2.1 merge: 201 Ma, 145 Ma and 2.58 Ma are clickable timeline keys', () => {
+test('ORBIT 2.1 merge: 201.4 Ma, 143.1 Ma and 2.58 Ma are clickable timeline keys', () => {
   const timeline = fresh();
   const labels = TIMELINE_KEYS.map(key => key.label);
-  assert.ok(labels.includes('201 Ma'), '201 Ma key present');
-  assert.ok(labels.includes('145 Ma'), '145 Ma key present');
+  assert.ok(labels.includes('201.4 Ma'), '201.4 Ma key present');
+  assert.ok(labels.includes('143.1 Ma'), '143.1 Ma key present');
   assert.ok(labels.includes('2.58 Ma'), '2.58 Ma key present');
   // Every key position must round-trip exactly to its own year (a key is a
   // piecewise-segment anchor, so interpolation at the anchor is exact).
@@ -123,6 +123,6 @@ test('ORBIT 2.1 merge: journey stops cover the requested geological gates', asyn
   globalThis.matchMedia = () => ({ matches: false });
   const { JOURNEY_STOPS } = await import('../src/ui/cosmic-time.js');
   assert.deepEqual([...JOURNEY_STOPS],
-    [-4540000000, -2500000000, -541000000, -252000000, -201000000, -145000000, -66000000, -2580000, 2026]);
+    [-4540000000, -2500000000, -538800000, -251902000, -201400000, -143100000, -66000000, -2580000, 2026]);
 });
 

@@ -1,0 +1,107 @@
+/* EARTH GEOLOGICAL TIME — ORBIT 2.0 second timeline (inlined by build.mjs). */
+
+/* ---- container (sits under the COSMIC TIME bar) ---- */
+#geo-timeline{position:relative;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,rgba(11,18,26,.76),rgba(8,14,21,.6));backdrop-filter:blur(16px);padding:8px 14px 6px;margin:0 0 2px;box-shadow:0 8px 30px #0003;max-height:82px;user-select:none;-webkit-user-select:none;z-index:6}
+#geo-timeline[hidden]{display:none}
+
+/* ---- header ---- */
+.geo-head{display:flex;align-items:center;gap:10px;margin-bottom:4px;min-width:0}
+.geo-kicker{font-size:8px;letter-spacing:2.2px;color:var(--muted);white-space:nowrap}
+.geo-trajectory .geo-kicker::after{content:' · EARTH HISTORY';color:var(--accent)}
+#geo-current{font-size:10.5px;letter-spacing:1.2px;color:#bcf5ea;font-weight:500;white-space:nowrap}
+#geo-current-zh{font-size:10px;color:#8ba7b6;white-space:nowrap}
+#geo-age{font-size:9px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:.5px}
+.geo-tools{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.geo-scales{display:flex;gap:2px;border:1px solid var(--line);border-radius:6px;padding:2px;background:rgba(10,20,28,.5)}
+.geo-scale-btn{padding:3px 7px;font-size:8px;letter-spacing:1px;color:#7e909f;border-radius:4px;white-space:nowrap}
+.geo-scale-btn.active{background:#243338;color:#bcf5ea}
+#geo-link{font-size:8px;letter-spacing:1px;padding:3px 7px;border:1px solid var(--line);border-radius:6px;color:var(--accent);white-space:nowrap}
+#geo-link[data-state=off]{color:#5f7a8a}
+#geo-info,#geo-min{width:22px;height:20px;font-size:11px;color:#7e909f;border:1px solid var(--line);border-radius:6px;display:inline-flex;align-items:center;justify-content:center}
+#geo-info:hover,#geo-min:hover{color:var(--accent)}
+
+/* ---- track + rows ---- */
+.geo-track{position:relative;height:56px;cursor:pointer;touch-action:none;outline-offset:4px}
+.geo-row{position:absolute;left:0;right:0;border-radius:4px;transition:opacity .2s}
+.geo-row--eon{top:2px;height:12px}
+.geo-row--era{top:16px;height:12px}
+.geo-row--period{top:30px;height:22px}
+.geo-row--event{top:54px;height:8px}
+.geo-row.dim{opacity:.3}
+.geo-row.emphasize{opacity:1}
+.geo-seg{position:absolute;top:0;bottom:0;border:1px solid rgba(255,255,255,.14);background:var(--seg);opacity:.88;cursor:pointer;border-radius:3px;transition:filter .2s,box-shadow .2s,outline-color .2s}
+.geo-seg:hover{filter:brightness(1.3);box-shadow:0 0 8px var(--seg)}
+.geo-seg.active{outline:1px solid var(--accent);outline-offset:-1px;filter:brightness(1.18)}
+.geo-event{position:absolute;top:1px;width:6px;height:6px;border-radius:50%;background:var(--seg);box-shadow:0 0 6px var(--seg);cursor:pointer;transform:translateX(-50%);transition:transform .2s;animation:geopulse 3.2s ease-in-out infinite}
+.geo-event:hover{transform:translateX(-50%) scale(1.6)}
+.geo-event.active{outline:1px solid var(--accent)}
+@keyframes geopulse{0%,100%{opacity:.62}50%{opacity:1}}
+
+/* ---- cursor ---- */
+.geo-cursor{position:absolute;top:0;bottom:0;left:100%;width:1px;background:var(--accent);pointer-events:none;opacity:.9}
+.geo-cursor i{position:absolute;top:0;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--accent)}
+#geo-timeline.geo-linked .geo-cursor{box-shadow:0 0 8px var(--accent)}
+#geo-timeline.unlinked .geo-cursor{opacity:.35;box-shadow:none}
+
+/* ---- hover tip ---- */
+.geo-tip{position:absolute;bottom:calc(100% + 4px);transform:translateX(-50%);padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:#0c161f;font-size:9px;color:#bcf5ea;white-space:nowrap;display:none;pointer-events:none;z-index:9}
+
+/* ---- period name tags ---- */
+.geo-tags{position:relative;height:13px;margin-top:1px}
+.geo-tag{position:absolute;transform:translateX(-50%);font-size:7.5px;letter-spacing:.4px;color:#6d8a9a;white-space:nowrap;pointer-events:none}
+
+/* ---- mini (collapsed) ---- */
+.geo-mini{display:flex;align-items:center;height:26px;padding:0 12px;font-size:9px;letter-spacing:1.2px;color:#8ba7b6;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:linear-gradient(180deg,rgba(11,18,26,.76),rgba(8,14,21,.6));font-variant-numeric:tabular-nums}
+
+/* ---- detail HUD ---- */
+.geo-hud{position:absolute;right:0;bottom:calc(100% + 10px);width:238px;z-index:10;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(160deg,rgba(14,24,34,.96),rgba(9,16,24,.9));backdrop-filter:blur(20px);box-shadow:0 20px 60px #000a}
+.geo-hud[hidden]{display:none}
+.geo-hud-eyebrow{font-size:8px;letter-spacing:2px;color:var(--muted)}
+.geo-hud-en{font-size:21px;font-weight:450;letter-spacing:3px;color:#cfe6ec;margin:9px 0 2px}
+.geo-hud-en span{font-size:9px;color:var(--muted);letter-spacing:1px;margin-left:7px}
+.geo-hud-zh{font-size:11px;color:#8ba7b6;margin:0 0 6px}
+.geo-hud-range{font-size:10.5px;color:#a9c3cf;letter-spacing:.5px;font-variant-numeric:tabular-nums;margin:0 0 9px}
+.geo-hud-desc{font-size:10.5px;line-height:1.75;color:#9faebc;margin:0 0 11px}
+.geo-hud-position{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:9px;margin-bottom:10px}
+.geo-hud-position b{font-size:8px;letter-spacing:1.4px;color:var(--muted);font-weight:400}
+.geo-hud-position span{font-size:11px;color:var(--accent);font-variant-numeric:tabular-nums}
+.geo-hud-actions{display:flex;gap:7px}
+.geo-hud-actions button{flex:1;padding:8px 10px;font-size:10px;letter-spacing:1px;border:1px solid var(--line);border-radius:6px;color:#a9c3cf}
+.geo-hud-actions .geo-hud-earth{background:#152a33;border-color:#93ecdc55;color:#bcf5ea}
+.geo-hud-actions .geo-hud-earth:hover{background:#1d3a44}
+.geo-hud-actions .geo-hud-close:hover{color:var(--accent)}
+
+/* ---- info source pop ---- */
+.geo-info-pop{position:absolute;right:0;bottom:calc(100% + 10px);width:300px;z-index:10;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:rgba(9,16,24,.94);backdrop-filter:blur(18px);font-size:9.5px;line-height:1.8;color:#8ba7b6;box-shadow:0 16px 50px #000a}
+.geo-info-pop b{display:block;color:#bcf5ea;letter-spacing:.6px;margin-bottom:4px}
+
+/* ---- responsive ---- */
+@media(max-width:900px){
+  #geo-timeline{max-height:86px;padding:7px 12px 5px}
+  .geo-hud{width:220px}
+}
+@media(max-width:600px){
+  #geo-timeline{margin:0 10px;padding:6px 10px 4px;max-height:104px}
+  .geo-track{height:50px}
+  .geo-row--eon{top:2px;height:11px}
+  .geo-row--era{top:15px;height:11px}
+  .geo-row--period{top:28px;height:20px}
+  .geo-row--event{top:50px;height:8px}
+  .geo-tag{font-size:6.5px}
+  #geo-current-zh{display:none}
+  .geo-kicker{font-size:7px;letter-spacing:1.6px}
+  .geo-scales button{padding:2px 5px;font-size:7px}
+  #geo-link{display:none}
+  .geo-tags{height:12px}
+  .geo-hud{right:-10px;width:min(238px,calc(100vw - 60px))}
+}
+/* compact-ui: the COSMIC bar becomes a fixed strip above the compact bar,
+   so the Geological bar follows as a fixed strip above it. */
+body.compact-ui #geo-timeline{position:fixed;left:10px;right:10px;bottom:max(132px,calc(66px + 58px + env(safe-area-inset-bottom)));z-index:6;pointer-events:auto;margin:0}
+body.compact-ui #geo-timeline.collapsed{bottom:max(66px,calc(66px + env(safe-area-inset-bottom)));max-height:30px}
+body.compact-ui .geo-hud{width:min(238px,calc(100vw - 60px))}
+
+/* ---- reduced motion ---- */
+@media(prefers-reduced-motion:reduce){
+  .geo-seg,.geo-event,.geo-cursor,.geo-hud,.geo-tip{transition:none!important;animation:none!important}
+}

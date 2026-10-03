@@ -22,7 +22,7 @@ export const HISTORICAL_EVENTS = [
   { id: 'great-oxidation', year: -2400000000, name: '大氧化事件', englishName: 'Great Oxidation Event',
     category: 'life', source: 'smithsonian',
     description: '蓝细菌产氧导致大气氧含量首次显著上升，深刻改变地球化学循环。' },
-  { id: 'cambrian-explosion', year: -541000000, name: '寒武纪生命大爆发', englishName: 'Cambrian Explosion',
+  { id: 'cambrian-explosion', year: -538800000, name: '寒武纪生命大爆发', englishName: 'Cambrian Explosion',
     category: 'life', source: 'britannica',
     description: '几乎所有主要动物门类在相对短暂的地质时间内首次出现于化石记录。' },
   { id: 'first-land-plants', year: -470000000, name: '最早的陆生植物', englishName: 'First Land Plants',
