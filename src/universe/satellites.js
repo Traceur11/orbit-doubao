@@ -30,6 +30,9 @@ function createSatellites(scene, earthOrbitGroup, earthSatellites) {
     if (i < 7) {
       const path = makeOrbit(r, 6331322, 0.12);
       path.quaternion.copy(quat);
+      path.userData.humanMade = true;
+      path.userData.orbitType = 'artificial-satellite';
+      path.userData.eraStartYear = 1957;
       earthOrbitGroup.add(path);
     }
   }
@@ -57,6 +60,9 @@ function createSatellites(scene, earthOrbitGroup, earthSatellites) {
   station.rotation.set(0.22, 0.35, 0.18);
   scene.add(station);
   const stationOrbit = makeOrbit(1.33, 8968650, 0.3, 0.55);
+  stationOrbit.userData.humanMade = true;
+  stationOrbit.userData.orbitType = 'space-station';
+  stationOrbit.userData.eraStartYear = 1998;
   earthOrbitGroup.add(stationOrbit);
   return { station, satellites };
 }

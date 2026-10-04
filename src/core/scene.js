@@ -97,6 +97,16 @@ export function updateWorldVisibility(world, camera, controls, orbitsVisible, na
   earthSatellites.visible = showSolar && techEra && earthDistance < 70;
   station.visible = showSolar && techEra && earthDistance < 150;
   earthOrbitGroup.visible = showSolar && orbitsVisible && earthDistance < 60;
+  // The group holds the Moon's natural orbit plus artificial rings (satellite
+  // paths + ISS). Before the space age the artificial rings must disappear
+  // while the Moon's natural orbit stays visible.
+  for (const line of earthOrbitGroup.children) {
+    if (line.userData?.humanMade === true) {
+      line.visible = showSolar && orbitsVisible && techEra && earthDistance < 60;
+    } else {
+      line.visible = showSolar && orbitsVisible && earthDistance < 60;
+    }
+  }
   orbitGroup.visible = !trajectory && orbitsVisible && dist > 8 && dist < 11000;
   const orbitFade = smooth(8, 35, dist) * (1 - smooth(1200, 11000, dist));
   for (const line of orbitGroup.children) line.material.opacity = line.userData.baseOpacity * orbitFade;

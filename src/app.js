@@ -133,6 +133,13 @@ export async function startOrbit() {
         ? getEarthEvolution(nowYear, nowYear)
         : getEarthEvolution(year, nowYear);
       techEra = getTechEra(year, nowYear);
+      // Safety net for artificial orbit rings (satellite paths + ISS): the
+      // Moon's natural orbit (humanMade !== true) is never touched.
+      if (world.earthOrbitGroup) {
+        for (const child of world.earthOrbitGroup.children) {
+          if (child.userData?.humanMade === true) child.visible = techEra;
+        }
+      }
       if (world.earthSatellites) world.earthSatellites.visible = techEra && !earthsense?.active;
       if (world.station) world.station.visible = techEra;
       if (world.jwst?.body?.group) world.jwst.body.group.visible = techEra;

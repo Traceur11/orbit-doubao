@@ -70,6 +70,8 @@ function createPlanets(scene, textures) {
     if (d.id === "uranus") mesh.rotation.z = 1.7;
   }
   const moonOrbit = makeOrbit(3.9, 7572387, 0.21, 0.07);
+  moonOrbit.userData.humanMade = false;
+  moonOrbit.userData.orbitType = 'natural-moon';
   earthOrbitGroup.add(moonOrbit);
   const { station, satellites } = createSatellites(scene, earthOrbitGroup, earthSatellites);
   return { bodies, earth, clouds, sun, station, satellites, orbitGroup, earthOrbitGroup, earthSatellites };
