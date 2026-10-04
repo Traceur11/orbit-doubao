@@ -12,16 +12,32 @@
  * is well-defined and exactly round-trips the present year.
  */
 
+/**
+ * ICS 2026/06-aligned anchors (V3 timeline upgrade: more clickable geological
+ * gates — Hadean/Archean, 1.8 Ga, 1.0 Ga, Cryogenian, Ediacaran, Silurian,
+ * Devonian, Carboniferous, Permian, Neogene, Holocene). Positions are UI
+ * design values; years are simulation years (negative = before present).
+ */
 export const TIMELINE_KEYS = Object.freeze([
   { p: 0.0, year: -4_540_000_000, label: '4.54 Ga' },
-  { p: 0.16, year: -2_500_000_000, label: '2.5 Ga' },
-  { p: 0.32, year: -538_800_000, label: '538.8 Ma' },
-  { p: 0.44, year: -251_902_000, label: '251.902 Ma' },
-  { p: 0.52, year: -201_400_000, label: '201.4 Ma' },
-  { p: 0.61, year: -143_100_000, label: '143.1 Ma' },
-  { p: 0.7, year: -66_000_000, label: '66 Ma' },
-  { p: 0.83, year: -2_580_000, label: '2.58 Ma' },
-  { p: 0.92, year: -300_000, label: '300 ka' },
+  { p: 0.055, year: -4_031_000_000, label: '4.031 Ga' },
+  { p: 0.11, year: -2_500_000_000, label: '2.5 Ga' },
+  { p: 0.17, year: -1_800_000_000, label: '1.8 Ga' },
+  { p: 0.23, year: -1_000_000_000, label: '1.0 Ga' },
+  { p: 0.29, year: -720_000_000, label: '720 Ma' },
+  { p: 0.34, year: -635_000_000, label: '635 Ma' },
+  { p: 0.39, year: -538_800_000, label: '538.8 Ma' },
+  { p: 0.44, year: -443_100_000, label: '443.1 Ma' },
+  { p: 0.49, year: -419_620_000, label: '419.62 Ma' },
+  { p: 0.54, year: -358_860_000, label: '358.86 Ma' },
+  { p: 0.59, year: -298_900_000, label: '298.9 Ma' },
+  { p: 0.64, year: -251_902_000, label: '251.902 Ma' },
+  { p: 0.69, year: -201_400_000, label: '201.4 Ma' },
+  { p: 0.75, year: -143_100_000, label: '143.1 Ma' },
+  { p: 0.81, year: -66_000_000, label: '66 Ma' },
+  { p: 0.86, year: -23_030_000, label: '23.03 Ma' },
+  { p: 0.91, year: -2_580_000, label: '2.58 Ma' },
+  { p: 0.95, year: -11_700, label: '11.7 ka' },
   { p: 1.0, year: 2026, label: 'NOW' },
 ]);
 

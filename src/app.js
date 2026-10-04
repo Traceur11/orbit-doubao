@@ -18,6 +18,8 @@ import { UniverseClock } from './universe-time/universe-clock.js';
 import { TimelineController } from './universe-time/timeline-controller.js';
 import { getEarthEvolution, formatEarthAge, getTechEra } from './universe-time/earth-evolution.js';
 import { createPaleogeographyTextures } from './earth/paleogeography.js';
+import { createPaleoEarthManager, createPlateMotionLayer } from './universe-time/paleo-earth.js';
+import { PALEO_CONFIG, quantizeMa, supportsGplates } from './universe-time/paleo-config.js';
 import { createCosmicTimeUI, parseOrbitUrl } from './ui/cosmic-time.js';
 import { BRANDING } from './branding.js';
 
@@ -60,6 +62,11 @@ export async function startOrbit() {
     Object.assign(textures, historicalTextures);
     const world = createWorld(scene, textures, pixels);
     const earthDetail = createEarthDetail({ world, renderer, assets, compact: mobile() });
+    // Paleo-Earth (V3+V4 merge): GPlates reconstructed coastlines feed the
+    // Earth shader crossfade channel (uHistoryMapA/B), static plate polygons
+    // feed the plate-drift arrow layer. Both are fetched lazily and cached.
+    const paleoEarth = await createPaleoEarthManager({ renderer });
+    const plateMotion = createPlateMotionLayer({ scene, radius: 1.02 });
     const info = createInfoPanel({ getData: world.getData });
     let ui, earthsense;
     const navigation = createNavigation({
@@ -116,7 +123,10 @@ export async function startOrbit() {
     // only from 1957 onward in simulation years — a Jurassic Earth must not
     // be surrounded by modern spacecraft.
     let techEra = true;
-    function applyEarthVisual(year) {
+    // Paleo-Earth source/confidence state surfaced through window.ORBIT.paleoEarth.
+    let paleoStatus = { mode: 'present', confidence: 'observed', stateName: '现代地球', ma: 0, source: 'modern-earth' };
+    let earthVisualRequest = 0;
+    async function applyEarthVisual(year) {
       // EarthSense shows the live modern surface; on exit the animate loop
       // re-applies the visual for the current simulation year.
       const visual = earthsense?.active
@@ -144,6 +154,8 @@ export async function startOrbit() {
         jwstBtn.title = techEra ? '探访詹姆斯·韦布太空望远镜' : '该时期还没有韦布望远镜';
       }
       const u = world.earth?.mesh?.material?.uniforms;
+      // Sync pass: the procedural paleogeography maps give immediate feedback
+      // while dragging and double as the offline fallback for GPlates.
       if (u && visual.mapA && historicalTextures[visual.mapA]) u.uHistoryMapA.value = historicalTextures[visual.mapA];
       if (u && visual.mapB && historicalTextures[visual.mapB]) u.uHistoryMapB.value = historicalTextures[visual.mapB];
       if (u) {
@@ -198,9 +210,64 @@ export async function startOrbit() {
           dockBtn.title = '';
         }
       }
+
+      // Async pass: GPlates reconstruction replaces the procedural map and
+      // plate-drift arrows follow the reconstructed motion (0–440 Ma only).
+      const ma = visual.ageMa;
+      const token = ++earthVisualRequest;
+      if (earthsense?.active || ma <= 0 || !Number.isFinite(year)) {
+        plateMotion.clear();
+        plateMotion.setVisible(false);
+        paleoStatus = { mode: 'present', confidence: 'observed', stateName: visual.surfaceState || 'PRESENT EARTH', ma: 0, source: 'modern-earth' };
+        return;
+      }
+      if (supportsGplates(ma)) {
+        const entry = await paleoEarth.update(ma);
+        if (token !== earthVisualRequest) return;
+        if (entry && u) {
+          u.uHistoryMapA.value = entry.texture;
+          u.uHistoryMapB.value = entry.texture;
+          u.uHistoryBlend.value = 0;
+          u.uHistoryStrength.value = 1;
+        }
+        paleoStatus = entry
+          ? { mode: 'gplates', confidence: 'reconstruction', stateName: visual.surfaceState || '古地球', ma, source: PALEO_CONFIG.sourceLabel }
+          : { mode: 'offline-schematic', confidence: 'approximate', stateName: visual.surfaceState || '古地球', ma, source: 'procedural paleogeography（离线示意）' };
+        if (cosmic?.isPlateEnabled?.()) {
+          const q = quantizeMa(ma);
+          const lookAhead = Math.min(PALEO_CONFIG.maxMa, q + PALEO_CONFIG.motion.lookAheadMa);
+          try {
+            const [nowGeo, futureGeo] = await Promise.all([
+              paleoEarth.getMotionSnapshot(q),
+              paleoEarth.getMotionSnapshot(lookAhead),
+            ]);
+            if (token !== earthVisualRequest) return;
+            if (nowGeo && futureGeo) {
+              plateMotion.updateFromGeoJSON(nowGeo, futureGeo, q);
+              plateMotion.setVisible(true);
+            } else {
+              plateMotion.clear();
+              plateMotion.setVisible(false);
+            }
+          } catch {
+            plateMotion.clear();
+            plateMotion.setVisible(false);
+          }
+        } else {
+          plateMotion.clear();
+          plateMotion.setVisible(false);
+        }
+        return;
+      }
+      // >440 Ma: evidence-constrained deep-time schematic; no plate drift data.
+      plateMotion.clear();
+      plateMotion.setVisible(false);
+      paleoStatus = ma >= 4000
+        ? { mode: 'conceptual', confidence: 'conceptual', stateName: visual.surfaceState || 'MAGMA EARTH', ma, source: 'conceptual early Earth（概念化早期地球）' }
+        : { mode: 'deep-time-schematic', confidence: 'deep-time-schematic', stateName: visual.surfaceState || 'PRECAMBRIAN EARTH', ma, source: 'evidence-constrained schematic（深时证据约束示意）' };
     }
     const cosmic = createCosmicTimeUI({
-      world, navigation, clock, timeline, toast,
+      world, navigation, clock, timeline, toast, plateMotion,
       searchInput: document.getElementById('destination-search'),
       onYearChange: applyEarthVisual,
     });
@@ -219,19 +286,24 @@ export async function startOrbit() {
       // camera on the default Earth view. Immediate + same target = idempotent.
       setTimeout(() => {
         navigation.flyTo(urlState.target, { immediate: true });
-        applyEarthVisual(cosmic.getYear());
+        void applyEarthVisual(cosmic.getYear());
       }, 250);
     }
     // Apply after the target is set so the era-aware info-panel blurb and
     // Earth HUD render for the requested focus body.
-    applyEarthVisual(cosmic.getYear());
+    void applyEarthVisual(cosmic.getYear());
     cosmic.refresh();
     resize(world);
     document.getElementById('load-progress').style.width = '100%';
     document.getElementById('load-text').textContent = BRANDING.welcome;
     await renderer.compileAsync(scene, camera);
     composer.render();
-    void earthDetail.prepare();
+    const detailReady = earthDetail.prepare();
+    // The high-res modern textures land on uDay/uNight asynchronously; re-apply
+    // the era visual afterwards so a deep-linked past time is never overwritten
+    // back to a modern surface (GPlates rides the uHistoryMap crossfade channel,
+    // so this is a safe idempotent refresh).
+    if (detailReady?.then) detailReady.then(() => { void applyEarthVisual(cosmic.getYear()); });
     document.getElementById('loading').classList.add('done');
     setTimeout(() => document.getElementById('loading')?.remove(), 900);
 
@@ -290,7 +362,13 @@ export async function startOrbit() {
       // visual state as soon as the session ends.
       if (earthsenseActive !== earthsense.active) {
         earthsenseActive = earthsense.active;
-        if (!earthsenseActive) applyEarthVisual(cosmic.getYear());
+        if (earthsenseActive) {
+          // EarthSense observes the modern surface: hide paleo plate drift.
+          plateMotion.clear();
+          plateMotion.setVisible(false);
+        } else {
+          void applyEarthVisual(cosmic.getYear());
+        }
       }
       updateFraming(observingEarth, dt);
       if (earthsense.visible) {
@@ -318,6 +396,7 @@ export async function startOrbit() {
       else composer.render();
     }
     addEventListener('resize', () => ui.wallpaper.active ? ui.wallpaper.resize() : resize(world));
+    addEventListener('beforeunload', () => { paleoEarth.dispose(); plateMotion.dispose(); });
     document.addEventListener('visibilitychange', () => {
       hidden = document.hidden;
       lastFrameTime = performance.now();
@@ -360,9 +439,15 @@ export async function startOrbit() {
         getState: () => getEarthEvolution(cosmic.getYear(), nowYear),
         setYear: year => {
           cosmic.setYear(year);
-          applyEarthVisual(cosmic.getYear());
+          void applyEarthVisual(cosmic.getYear());
           cosmic.refresh();
         },
+      },
+      paleoEarth: {
+        getState: () => ({ ...paleoEarth.getState(), ...paleoStatus }),
+        getPlateMotionState: () => plateMotion.getState(),
+        setPlateVisible: visible => plateMotion.setVisible(visible),
+        applyYear: async year => { await applyEarthVisual(year); },
       },
       destinations: () => [...world.galaxyDefinitions, ...world.deepSpace.bodies.values()].map(body => ({
         id: body.id, name: body.cn, kind: body.kind, parentGalaxy: body.parentGalaxy,

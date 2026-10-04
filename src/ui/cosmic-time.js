@@ -30,6 +30,14 @@ export const JOURNEY_STOPS = Object.freeze([
 ]);
 const JOURNEY_HOLD_MS = 2600;
 
+/**
+ * Only these anchors get a visible label on the cosmic bar (every key still
+ * renders a clickable tick). Denser labels would overlap at 8px on mobile.
+ */
+const SHOW_TICK_LABELS = new Set([
+  '2.5 Ga', '538.8 Ma', '251.902 Ma', '201.4 Ma', '143.1 Ma', '66 Ma', '2.58 Ma',
+]);
+
 /** Parse ?time=&target= from a URL string (used by app.js and tests). */
 export function parseOrbitUrl(search = window.location.search, nowYear = 2026) {
   // Friendly URL aliases for destinations whose internal id differs.
@@ -53,7 +61,7 @@ function formatSpeed(speed) {
   return `${speed}×`;
 }
 
-export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, searchInput, onYearChange }) {
+export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, searchInput, onYearChange, plateMotion }) {
   const $ = id => document.getElementById(id);
   const track = $('cosmic-track');
   const thumb = $('cosmic-thumb');
@@ -62,6 +70,7 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
   const playButton = $('cosmic-play');
   const speedButton = $('cosmic-speed');
   const journeyButton = $('cosmic-journey');
+  const platesButton = $('cosmic-plates');
   const panel = $('history-panel');
 
   let playing = false;
@@ -73,6 +82,7 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
   let tick = 0;
   let urlTimer = null;
   let exploreTimer = null;
+  let plateEnabled = true;
   let exploreToken = 0;
 
   /* ---------- ticks ---------- */
@@ -91,7 +101,7 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
       toast(`时间轴 → ${key.label}`);
     };
     ticksHost.appendChild(mark);
-    if (key.p > 0 && key.p < 1) {
+    if (key.p > 0 && key.p < 1 && SHOW_TICK_LABELS.has(key.label)) {
       const label = document.createElement('span');
       label.className = 'cosmic-tick-label';
       label.textContent = key.label;
@@ -197,7 +207,17 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
       return button;
     }));
     const note = $('history-panel').querySelector('.history-note');
-    note.textContent = `历史可视化 · 近似示意，非精确复原；银河轨道为参数化近似（银河年 ${formatYearsAgo(getGalacticYear())}）`;
+    // Paleo-Earth source/confidence label (set by app.js through window.ORBIT).
+    const paleo = globalThis.ORBIT?.paleoEarth?.getState?.();
+    if (paleo && paleo.confidence && paleo.confidence !== 'observed') {
+      const label = paleo.confidence === 'reconstruction' ? 'GPlates 板块重建'
+        : paleo.confidence === 'deep-time-schematic' ? '深时证据约束示意'
+          : paleo.confidence === 'conceptual' ? '概念化早期地球'
+            : '离线示意（OFFLINE SCHEMATIC）';
+      note.textContent = `${paleo.stateName || paleo.mode || '古地球'} · ${label} · 海岸线/板块按地质时间重建；银河轨道为参数化近似`;
+    } else {
+      note.textContent = `历史可视化 · 近似示意，非精确复原；银河轨道为参数化近似（银河年 ${formatYearsAgo(getGalacticYear())}）`;
+    }
   }
 
   function showPanel(open) {
@@ -299,6 +319,23 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
   };
   $('cosmic-back').onclick = () => stepYear(-1);
   $('cosmic-forward').onclick = () => stepYear(1);
+  if (platesButton) {
+    const syncPlatesButton = () => {
+      platesButton.setAttribute('aria-pressed', String(plateEnabled));
+      platesButton.classList.toggle('active', plateEnabled);
+      platesButton.title = plateEnabled
+        ? '板块漂移：开（GPlates 重建方向；箭头长度为视觉放大）' : '板块漂移：关';
+    };
+    platesButton.onclick = () => {
+      plateEnabled = !plateEnabled;
+      syncPlatesButton();
+      plateMotion?.setVisible(plateEnabled);
+      // Re-apply the current era so arrows appear/disappear immediately.
+      onYearChange?.(clock.getYear());
+      toast(plateEnabled ? '板块漂移：开' : '板块漂移：关');
+    };
+    syncPlatesButton();
+  }
   $('cosmic-now').onclick = () => {
     cancelJourney();
     setPlaying(false);
@@ -445,6 +482,7 @@ export function createCosmicTimeUI({ world, navigation, clock, timeline, toast, 
     startJourney,
     cancelJourney,
     stepYear,
+    isPlateEnabled: () => plateEnabled,
     getState: () => ({
       year: clock.getYear(),
       nowYear: clock.nowYear,

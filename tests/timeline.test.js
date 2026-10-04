@@ -69,11 +69,12 @@ test('future years extend the timeline beyond NOW', () => {
 
 test('step moves between adjacent timeline keys', () => {
   const timeline = fresh();
+  // V3 timeline upgrade: NOW's previous key is the Holocene boundary (11.7 ka).
   const previous = timeline.step(NOW, -1);
-  assert.equal(previous.year, -300000);
-  assert.equal(previous.position, 0.92);
+  assert.equal(previous.year, -11700);
+  assert.equal(previous.position, 0.95);
   const next = timeline.step(-300000, 1);
-  assert.equal(next.year, NOW);
+  assert.equal(next.year, -11700);
   assert.equal(timeline.step(-4540000000, -1), null);
   assert.equal(timeline.step(NOW, 1), null);
   assert.throws(() => timeline.step(NOW, 0), RangeError);
